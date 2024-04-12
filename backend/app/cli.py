@@ -1,6 +1,10 @@
+# Other modules
 import os
+
+# Flask modules
 from flask import Blueprint
 import click
+
 
 bp = Blueprint('cli', __name__, cli_group=None)
 
@@ -13,7 +17,7 @@ def translate():
 
 @translate.command()
 @click.argument('lang')
-def init(lang):
+def init(lang) -> None:
     """Initialize a new language."""
     if os.system('pybabel extract -F babel.cfg -k _l -o messages.pot .'):
         raise RuntimeError('extract command failed')
@@ -24,7 +28,7 @@ def init(lang):
 
 
 @translate.command()
-def update():
+def update() -> None:
     """Update all languages."""
     if os.system('pybabel extract -F babel.cfg -k _l -o messages.pot .'):
         raise RuntimeError('extract command failed')
@@ -34,7 +38,7 @@ def update():
 
 
 @translate.command()
-def compile():
+def compile() -> None:
     """Compile all languages."""
     if os.system('pybabel compile -d app/translations'):
         raise RuntimeError('compile command failed')

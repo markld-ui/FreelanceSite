@@ -1,13 +1,18 @@
+# Other modules
 from datetime import datetime, timezone
 from hashlib import md5
 from time import time
-from typing import Optional
 import sqlalchemy as sa
 import sqlalchemy.orm as so
+
+# Flask modules
+from typing import Optional
 from flask import current_app
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 import jwt
+
+# Package modules
 from app import db, login
 from app.search import add_to_index, remove_from_index, query_index
 
@@ -44,44 +49,44 @@ class User(UserMixin, db.Model):
         secondaryjoin=(followers.c.follower_id == id),
         back_populates='following')
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return '<User {}>'.format(self.username)
 
-    def set_password(self, password):
+    def set_password(self, password) -> str:
         self.password_hash = generate_password_hash(password)
 
-    def check_password(self, password):
+    def check_password(self, password) -> bool:
         return check_password_hash(self.password_hash, password)
 
-    def avatar(self, size):
-        digest = md5(self.email.lower().encode('utf-8')).hexdigest()
+    def avatar(self, size) -> str:
+        digest: str = md5(self.email.lower().encode('utf-8')).hexdigest()
         return f'https://www.gravatar.com/avatar/{digest}?d=identicon&s={size}'
 
-    def follow(self, user):
+    def follow(self, user) -> None:
         if not self.is_following(user):
             self.following.add(user)
 
-    def unfollow(self, user):
+    def unfollow(self, user) -> None:
         if self.is_following(user):
             self.following.remove(user)
 
-    def is_following(self, user):
+    def is_following(self, user) -> any:
         query = self.following.select().where(User.id == user.id)
         return db.session.scalar(query) is not None
 
-    def followers_count(self):
+    def followers_count(self) -> any:
         query = sa.select(sa.func.count()).select_from(
             self.followers.select().subquery())
         return db.session.scalar(query)
 
-    def following_count(self):
+    def following_count(self) -> any:
         query = sa.select(sa.func.count()).select_from(
             self.following.select().subquery())
         return db.session.scalar(query)
 
-    def following_posts(self):
-        Author = so.aliased(User)
-        Follower = so.aliased(User)
+    def following_posts(self) -> any:
+        Author: type[User] = so.aliased(User)
+        Follower: type[User] = so.aliased(User)
         return (
             sa.select(Post)
             .join(Post.author.of_type(Author))
@@ -100,7 +105,7 @@ class User(UserMixin, db.Model):
             current_app.config['SECRET_KEY'], algorithm='HS256')
 
     @staticmethod
-    def verify_reset_password_token(token):
+    def verify_reset_password_token(token) -> any:
         try:
             id = jwt.decode(token, current_app.config['SECRET_KEY'],
                             algorithms=['HS256'])['reset_password']
@@ -110,17 +115,17 @@ class User(UserMixin, db.Model):
 
 
 @login.user_loader
-def load_user(id):
+def load_user(id) -> any:
     return db.session.get(User, int(id))
 
 
 class SearchableMixin(object):
     @classmethod
-    def search(cls, expression, page, per_page):
+    def search(cls, expression, page, per_page) -> tuple | None:
         ids, total = query_index(cls.__tablename__, expression, page, per_page)
         if total == 0:
             return [], 0
-        when = []
+        when: list = []
         for i in range(len(ids)):
             when.append((ids[i], i))
         query = sa.select(cls).where(cls.id.in_(ids)).order_by(
@@ -128,7 +133,7 @@ class SearchableMixin(object):
         return db.session.scalars(query), total
 
     @classmethod
-    def before_commit(cls, session):
+    def before_commit(cls, session) -> None:
         session._changes = {
             'add': list(session.new),
             'update': list(session.dirty),
@@ -136,7 +141,7 @@ class SearchableMixin(object):
         }
 
     @classmethod
-    def after_commit(cls, session):
+    def after_commit(cls, session) -> None:
         for obj in session._changes['add']:
             if isinstance(obj, SearchableMixin):
                 add_to_index(obj.__tablename__, obj)
@@ -149,7 +154,7 @@ class SearchableMixin(object):
         session._changes = None
 
     @classmethod
-    def reindex(cls):
+    def reindex(cls) -> None:
         for obj in db.session.scalars(sa.select(cls)):
             add_to_index(cls.__tablename__, obj)
 
@@ -171,5 +176,5 @@ class Post(SearchableMixin, db.Model):
     __searchable__ = ['body']
 
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return '<Post {}>'.format(self.body)

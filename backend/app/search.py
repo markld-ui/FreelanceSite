@@ -1,10 +1,11 @@
+# Flask modules
 from flask import current_app
 
 
-def add_to_index(index, model):
+def add_to_index(index, model) -> dict:
     if not current_app.elasticsearch:
         return
-    payload = {}
+    payload: dict = {}
     for field in model.__searchable__:
         payload[field] = getattr(model, field)
     current_app.elasticsearch.index(index=index, id=model.id, document=payload)
@@ -16,7 +17,7 @@ def remove_from_index(index, model):
     current_app.elasticsearch.delete(index=index, id=model.id)
 
 
-def query_index(index, query, page, per_page):
+def query_index(index, query, page, per_page) -> tuple:
     if not current_app.elasticsearch:
         return [], 0
     search = current_app.elasticsearch.search(
@@ -24,5 +25,5 @@ def query_index(index, query, page, per_page):
         query={'multi_match': {'query': query, 'fields': ['*']}},
         from_=(page - 1) * per_page,
         size=per_page)
-    ids = [int(hit['_id']) for hit in search['hits']['hits']]
+    ids: list[int] = [int(hit['_id']) for hit in search['hits']['hits']]
     return ids, search['hits']['total']['value']

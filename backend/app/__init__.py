@@ -1,6 +1,9 @@
+# Other Modules
 import logging
 from logging.handlers import SMTPHandler, RotatingFileHandler
 import os
+
+# Flask modules
 from flask import Flask, request, current_app
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
@@ -27,7 +30,7 @@ moment = Moment()
 babel = Babel()
 
 
-def create_app(config_class=Config):
+def create_app(config_class=Config) -> Flask:
     app = Flask(__name__)
     app.config.from_object(config_class)
 
